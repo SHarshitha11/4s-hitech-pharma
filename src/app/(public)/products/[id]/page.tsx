@@ -10,12 +10,6 @@ interface ProductDetailsPageProps {
   }>;
 }
 
-export function generateStaticParams() {
-  return mockProducts.map((product) => ({
-    id: product.id,
-  }));
-}
-
 export default async function ProductDetailsPage({
   params,
 }: ProductDetailsPageProps) {
@@ -25,27 +19,27 @@ export default async function ProductDetailsPage({
 
   if (!product) {
     notFound();
+    return null;
   }
 
   return (
     <main className="min-w-0 overflow-x-hidden bg-gray-50 px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
       <div className="mx-auto w-full max-w-5xl space-y-8">
-        {/* Breadcrumb */}
-        <nav
-          aria-label="Breadcrumb"
-          className="text-sm text-gray-600"
-        >
+        <div>
           <Link
             href="/products"
-            className="font-medium text-gray-900 hover:underline"
+            className="text-sm font-medium text-gray-600 hover:text-gray-900"
           >
             Products
           </Link>
-          <span className="mx-2">/</span>
-          <span>{product.name}</span>
-        </nav>
 
-        {/* Header */}
+          <span className="mx-2 text-gray-400">/</span>
+
+          <span className="break-words text-sm text-gray-600">
+            {product.name}
+          </span>
+        </div>
+
         <section>
           <Badge>Product Details</Badge>
 
@@ -58,62 +52,88 @@ export default async function ProductDetailsPage({
           </p>
         </section>
 
-        {/* Product Information */}
         <Card
           title="Product Information"
           description="Catalogue information for this product."
         >
-          <div className="grid min-w-0 gap-6 sm:grid-cols-2">
-            <div>
-              <p className="text-sm font-medium text-gray-500">
+          <dl className="grid min-w-0 gap-x-8 gap-y-6 sm:grid-cols-2">
+            <div className="min-w-0">
+              <dt className="text-sm font-medium text-gray-500">
                 Product Code
-              </p>
-              <p className="mt-1 break-words text-gray-900">
+              </dt>
+              <dd className="mt-1 break-words text-sm text-gray-900">
                 {product.productCode}
-              </p>
+              </dd>
             </div>
 
-            <div>
-              <p className="text-sm font-medium text-gray-500">
+            <div className="min-w-0">
+              <dt className="text-sm font-medium text-gray-500">
                 Brand Name
-              </p>
-              <p className="mt-1 break-words text-gray-900">
+              </dt>
+              <dd className="mt-1 break-words text-sm text-gray-900">
                 {product.brandName}
-              </p>
+              </dd>
             </div>
 
-            <div>
-              <p className="text-sm font-medium text-gray-500">
+            <div className="min-w-0">
+              <dt className="text-sm font-medium text-gray-500">
                 Composition
-              </p>
-              <p className="mt-1 break-words text-gray-900">
+              </dt>
+              <dd className="mt-1 break-words text-sm text-gray-900">
                 {product.composition}
-              </p>
+              </dd>
             </div>
 
-            <div>
-              <p className="text-sm font-medium text-gray-500">
+            <div className="min-w-0">
+              <dt className="text-sm font-medium text-gray-500">
+                Strength
+              </dt>
+              <dd className="mt-1 break-words text-sm text-gray-900">
+                {product.strength}
+              </dd>
+            </div>
+
+            <div className="min-w-0">
+              <dt className="text-sm font-medium text-gray-500">
+                Dosage Form
+              </dt>
+              <dd className="mt-1 break-words text-sm text-gray-900">
+                {product.dosageForm}
+              </dd>
+            </div>
+
+            <div className="min-w-0">
+              <dt className="text-sm font-medium text-gray-500">
+                Pack Size
+              </dt>
+              <dd className="mt-1 break-words text-sm text-gray-900">
+                {product.packSize}
+              </dd>
+            </div>
+
+            <div className="min-w-0">
+              <dt className="text-sm font-medium text-gray-500">
                 Category
-              </p>
-              <div className="mt-2">
+              </dt>
+              <dd className="mt-2">
                 <Badge>{product.category}</Badge>
-              </div>
+              </dd>
             </div>
 
-            <div>
-              <p className="text-sm font-medium text-gray-500">
+            <div className="min-w-0">
+              <dt className="text-sm font-medium text-gray-500">
                 Manufacturer
-              </p>
-              <p className="mt-1 break-words text-gray-900">
+              </dt>
+              <dd className="mt-1 break-words text-sm text-gray-900">
                 {product.manufacturer}
-              </p>
+              </dd>
             </div>
 
-            <div>
-              <p className="text-sm font-medium text-gray-500">
+            <div className="min-w-0">
+              <dt className="text-sm font-medium text-gray-500">
                 Availability
-              </p>
-              <div className="mt-2">
+              </dt>
+              <dd className="mt-2">
                 <Badge
                   variant={
                     product.availability === "In Stock"
@@ -125,12 +145,36 @@ export default async function ProductDetailsPage({
                 >
                   {product.availability}
                 </Badge>
-              </div>
+              </dd>
             </div>
+          </dl>
+        </Card>
+
+        <Card
+          title="Ordering"
+          description="Pharmacies can register to access the ordering platform."
+        >
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link href="/register-pharmacy">
+              <Button className="w-full sm:w-auto">
+                Start Ordering
+              </Button>
+            </Link>
+
+            <Link href="/contact">
+              <Button variant="outline" className="w-full sm:w-auto">
+                Product Enquiry
+              </Button>
+            </Link>
+
+            <Link href="/products">
+              <Button variant="outline" className="w-full sm:w-auto">
+                Back to Products
+              </Button>
+            </Link>
           </div>
         </Card>
 
-        {/* Catalogue Notice */}
         <Card
           title="Catalogue Information"
           description="Product data is currently provided through API-ready mock data."
@@ -141,21 +185,6 @@ export default async function ProductDetailsPage({
             can be connected through the backend API when available.
           </p>
         </Card>
-
-        {/* Actions */}
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Link href="/products">
-            <Button variant="outline" className="w-full sm:w-auto">
-              Back to Products
-            </Button>
-          </Link>
-
-          <Link href="/contact">
-            <Button className="w-full sm:w-auto">
-              Product Enquiry
-            </Button>
-          </Link>
-        </div>
       </div>
     </main>
   );

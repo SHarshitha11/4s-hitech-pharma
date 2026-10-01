@@ -11,7 +11,10 @@ export type ProductCategory =
   | "Nutraceuticals"
   | "Surgical & Healthcare";
 
-export type ProductAvailability = "In Stock" | "Limited Stock" | "Out of Stock";
+export type ProductAvailability =
+  | "In Stock"
+  | "Limited Stock"
+  | "Out of Stock";
 
 export interface Product {
   id: string;
@@ -19,6 +22,9 @@ export interface Product {
   name: string;
   brandName: string;
   composition: string;
+  strength: string;
+  dosageForm: string;
+  packSize: string;
   category: ProductCategory;
   manufacturer: string;
   availability: ProductAvailability;
