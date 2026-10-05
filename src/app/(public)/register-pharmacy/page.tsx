@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -430,7 +430,7 @@ export default function RegisterPharmacyPage() {
 
         {step === 1 && (
           <Card
-            title="Step 1 â€” Business Details"
+            title="Step 1 - Business Details"
             description="Provide the basic business and contact information."
           >
             <div className="grid gap-5 sm:grid-cols-2">
@@ -603,7 +603,7 @@ export default function RegisterPharmacyPage() {
 
         {step === 2 && (
           <Card
-            title="Step 2 â€” Regulatory Details"
+            title="Step 2 - Regulatory Details"
             description="Provide the pharmacy's regulatory information."
           >
             <div className="grid gap-5 sm:grid-cols-2">
@@ -716,7 +716,7 @@ export default function RegisterPharmacyPage() {
 
         {step === 3 && (
           <Card
-            title="Step 3 â€” Address"
+            title="Step 3 - Address"
             description="Enter the pharmacy's registered address."
           >
             <div className="space-y-5">
@@ -829,7 +829,7 @@ export default function RegisterPharmacyPage() {
 
         {step === 4 && (
           <Card
-            title="Step 4 â€” Documents"
+            title="Step 4 - Documents"
             description="Upload the required registration documents."
           >
             <div className="space-y-6">
@@ -973,7 +973,7 @@ export default function RegisterPharmacyPage() {
 
         {step === 5 && (
           <Card
-            title="Step 5 â€” Review & Submit"
+            title="Step 5 - Review & Submit"
             description="Review the information before submitting your pharmacy registration."
           >
             <div className="space-y-8">
