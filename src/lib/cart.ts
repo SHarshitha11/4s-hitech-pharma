@@ -20,12 +20,24 @@ export function getCartItems(): CartItem[] {
       return [];
     }
 
-    const parsed = JSON.parse(stored);
+    const parsed: unknown = JSON.parse(stored);
 
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed as CartItem[];
   } catch {
     return [];
   }
+}
+
+export function saveCartItems(items: CartItem[]) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  sessionStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
 }
 
 export function addToCart(item: CartItem) {
@@ -44,9 +56,50 @@ export function addToCart(item: CartItem) {
     items.push(item);
   }
 
-  sessionStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+  saveCartItems(items);
 
   return items;
+}
+
+export function updateCartItemQuantity(
+  productId: string,
+  quantity: number,
+) {
+  if (!Number.isFinite(quantity)) {
+    return getCartItems();
+  }
+
+  const items = getCartItems();
+  const index = items.findIndex(
+    (item) => item.productId === productId,
+  );
+
+  if (index === -1) {
+    return items;
+  }
+
+  items[index] = {
+    ...items[index],
+    quantity: Math.max(1, Math.floor(quantity)),
+  };
+
+  saveCartItems(items);
+
+  return items;
+}
+
+export function removeFromCart(productId: string) {
+  const items = getCartItems().filter(
+    (item) => item.productId !== productId,
+  );
+
+  saveCartItems(items);
+
+  return items;
+}
+
+export function clearCart() {
+  saveCartItems([]);
 }
 
 export function getCartItemCount() {
