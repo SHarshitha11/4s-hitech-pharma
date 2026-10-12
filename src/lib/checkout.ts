@@ -1,5 +1,8 @@
-export const ORDER_REQUEST_STORAGE_KEY = "4s-hitech-pharma-order-request";
-export const LAST_ORDER_STORAGE_KEY = "4s-hitech-pharma-last-order";
+export const ORDER_REQUEST_STORAGE_KEY =
+  "4s-hitech-pharma-order-request";
+
+export const LAST_ORDER_STORAGE_KEY =
+  "4s-hitech-pharma-last-order";
 
 export type DeliveryAddress = {
   businessName: string;
@@ -14,6 +17,18 @@ export type DeliveryAddress = {
 
 export type PaymentTerm = "CREDIT" | "PREPAID";
 
+export type OrderStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "PROCESSING"
+  | "PACKED"
+  | "DISPATCHED"
+  | "OUT_FOR_DELIVERY"
+  | "DELIVERED"
+  | "CANCELLED"
+  | "RETURN_REQUESTED"
+  | "RETURNED";
+
 export type CheckoutOrderItem = {
   productId: string;
   productName: string;
@@ -25,7 +40,7 @@ export type CheckoutOrderItem = {
 
 export type OrderRequest = {
   orderId: string;
-  status: "PENDING";
+  status: OrderStatus;
   createdAt: string;
   deliveryAddress: DeliveryAddress;
   paymentTerm: PaymentTerm;
@@ -34,6 +49,29 @@ export type OrderRequest = {
   subtotal: number;
   tax: number;
   total: number;
+};
+
+export const ORDER_STATUS_SEQUENCE: OrderStatus[] = [
+  "PENDING",
+  "CONFIRMED",
+  "PROCESSING",
+  "PACKED",
+  "DISPATCHED",
+  "OUT_FOR_DELIVERY",
+  "DELIVERED",
+];
+
+export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  PENDING: "Pending",
+  CONFIRMED: "Confirmed",
+  PROCESSING: "Processing",
+  PACKED: "Packed",
+  DISPATCHED: "Dispatched",
+  OUT_FOR_DELIVERY: "Out for Delivery",
+  DELIVERED: "Delivered",
+  CANCELLED: "Cancelled",
+  RETURN_REQUESTED: "Return Requested",
+  RETURNED: "Returned",
 };
 
 export function saveOrderRequest(order: OrderRequest) {
@@ -58,7 +96,9 @@ export function getLastOrder(): OrderRequest | null {
   }
 
   try {
-    const stored = sessionStorage.getItem(LAST_ORDER_STORAGE_KEY);
+    const stored = sessionStorage.getItem(
+      LAST_ORDER_STORAGE_KEY,
+    );
 
     if (!stored) {
       return null;
@@ -70,9 +110,24 @@ export function getLastOrder(): OrderRequest | null {
   }
 }
 
+export function getOrderById(
+  orderId: string,
+): OrderRequest | null {
+  const order = getLastOrder();
+
+  if (!order || order.orderId !== orderId) {
+    return null;
+  }
+
+  return order;
+}
+
 export function createOrderId() {
   const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).slice(2, 7).toUpperCase();
+  const random = Math.random()
+    .toString(36)
+    .slice(2, 7)
+    .toUpperCase();
 
   return `ORD-${timestamp}-${random}`;
 }
