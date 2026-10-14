@@ -65,14 +65,14 @@ describe("Orders and Tracking Integration", () => {
     ).toBeInTheDocument();
 
     expect(
-      screen.getByText("Pending"),
-    ).toBeInTheDocument();
+      screen.getAllByText("Pending").length,
+    ).toBeGreaterThanOrEqual(2);
 
     expect(findExactAmount("1,260.00")).toHaveLength(1);
 
     expect(
       screen.getByRole("link", {
-        name: "Track Order",
+        name: "View Order Details",
       }),
     ).toHaveAttribute(
       "href",

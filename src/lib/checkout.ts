@@ -4,6 +4,9 @@ export const ORDER_REQUEST_STORAGE_KEY =
 export const LAST_ORDER_STORAGE_KEY =
   "4s-hitech-pharma-last-order";
 
+export const ORDER_HISTORY_STORAGE_KEY =
+  "4s-hitech-pharma-order-history";
+
 export type DeliveryAddress = {
   businessName: string;
   contactName: string;
@@ -74,6 +77,32 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   RETURNED: "Returned",
 };
 
+export function getOrderHistory(): OrderRequest[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const stored = sessionStorage.getItem(
+      ORDER_HISTORY_STORAGE_KEY,
+    );
+
+    if (stored) {
+      const parsed: unknown = JSON.parse(stored);
+
+      if (Array.isArray(parsed)) {
+        return parsed as OrderRequest[];
+      }
+    }
+
+    const latestOrder = getLastOrder();
+
+    return latestOrder ? [latestOrder] : [];
+  } catch {
+    return [];
+  }
+}
+
 export function saveOrderRequest(order: OrderRequest) {
   if (typeof window === "undefined") {
     return;
@@ -87,6 +116,21 @@ export function saveOrderRequest(order: OrderRequest) {
   sessionStorage.setItem(
     LAST_ORDER_STORAGE_KEY,
     JSON.stringify(order),
+  );
+
+  const existingOrders = getOrderHistory();
+
+  const updatedHistory = [
+    order,
+    ...existingOrders.filter(
+      (existingOrder) =>
+        existingOrder.orderId !== order.orderId,
+    ),
+  ];
+
+  sessionStorage.setItem(
+    ORDER_HISTORY_STORAGE_KEY,
+    JSON.stringify(updatedHistory),
   );
 }
 
@@ -113,17 +157,18 @@ export function getLastOrder(): OrderRequest | null {
 export function getOrderById(
   orderId: string,
 ): OrderRequest | null {
-  const order = getLastOrder();
+  const order = getOrderHistory().find(
+    (existingOrder) => existingOrder.orderId === orderId,
+  );
 
-  if (!order || order.orderId !== orderId) {
-    return null;
-  }
-
-  return order;
+  return order ?? null;
 }
 
 export function createOrderId() {
-  const timestamp = Date.now().toString(36).toUpperCase();
+  const timestamp = Date.now()
+    .toString(36)
+    .toUpperCase();
+
   const random = Math.random()
     .toString(36)
     .slice(2, 7)
