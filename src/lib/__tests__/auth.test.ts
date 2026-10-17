@@ -1,4 +1,4 @@
-﻿import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   AUTH_STORAGE_KEY,
@@ -8,6 +8,9 @@ import {
   getDemoCredentials,
   hasValidResetToken,
   isAuthenticated,
+  canAccessAdmin,
+  getAdminDemoCredentials,
+  isAdminRole,
   loginWithDemoCredentials,
   resetDemoPassword,
   startPasswordReset,
@@ -59,6 +62,40 @@ describe("Authentication utilities", () => {
     expect(session?.role).toBe("PHARMACY");
   });
 
+
+  it("recognizes admin demo roles and admin access", () => {
+    const credentials = getAdminDemoCredentials();
+
+    expect(credentials).toHaveLength(3);
+    expect(credentials.map((credential) => credential.role)).toEqual([
+      "OPERATIONS",
+      "PRODUCT_MANAGER",
+      "SUPER_ADMIN",
+    ]);
+
+    expect(isAdminRole("OPERATIONS")).toBe(true);
+    expect(isAdminRole("PRODUCT_MANAGER")).toBe(true);
+    expect(isAdminRole("SUPER_ADMIN")).toBe(true);
+    expect(isAdminRole("PHARMACY")).toBe(false);
+
+    const session = loginWithDemoCredentials(
+      "admin@example.com",
+      "Admin@123",
+    );
+
+    expect(session?.role).toBe("SUPER_ADMIN");
+    expect(canAccessAdmin(session)).toBe(true);
+  });
+
+  it("denies admin access to a pharmacy session", () => {
+    const session = loginWithDemoCredentials(
+      "pharmacy@example.com",
+      "Pharma@123",
+    );
+
+    expect(session?.role).toBe("PHARMACY");
+    expect(canAccessAdmin(session)).toBe(false);
+  });
   it("clears the authentication session", () => {
     loginWithDemoCredentials("pharmacy@example.com", "Pharma@123");
 

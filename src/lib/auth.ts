@@ -1,17 +1,51 @@
-﻿export const AUTH_STORAGE_KEY = "4s-hitech-pharma-auth-session";
+export const AUTH_STORAGE_KEY = "4s-hitech-pharma-auth-session";
 export const RESET_TOKEN_KEY = "4s-hitech-pharma-reset-token";
 export const AUTH_COOKIE_NAME = "4s-hitech-pharma-auth";
 
+export type AuthRole =
+  | "PHARMACY"
+  | "OPERATIONS"
+  | "PRODUCT_MANAGER"
+  | "SUPER_ADMIN";
+
 export type AuthSession = {
   authenticated: true;
-  role: "PHARMACY";
+  role: AuthRole;
   email: string;
   loggedInAt: string;
+};
+
+type DemoAdminCredential = {
+  email: string;
+  password: string;
+  role: Exclude<AuthRole, "PHARMACY">;
+  label: string;
 };
 
 const DEMO_EMAIL = "pharmacy@example.com";
 const DEMO_PHONE = "9876543210";
 const DEFAULT_DEMO_PASSWORD = "Pharma@123";
+
+const DEMO_ADMIN_CREDENTIALS: DemoAdminCredential[] = [
+  {
+    email: "operations@example.com",
+    password: "Operations@123",
+    role: "OPERATIONS",
+    label: "Operations Staff",
+  },
+  {
+    email: "product@example.com",
+    password: "Product@123",
+    role: "PRODUCT_MANAGER",
+    label: "Product Manager",
+  },
+  {
+    email: "admin@example.com",
+    password: "Admin@123",
+    role: "SUPER_ADMIN",
+    label: "Super Admin",
+  },
+];
 
 function getStoredDemoPassword() {
   if (typeof window === "undefined") {
@@ -32,6 +66,10 @@ export function getDemoCredentials() {
   };
 }
 
+export function getAdminDemoCredentials() {
+  return DEMO_ADMIN_CREDENTIALS.map((credential) => ({ ...credential }));
+}
+
 export function getAuthSession(): AuthSession | null {
   if (typeof window === "undefined") {
     return null;
@@ -46,10 +84,18 @@ export function getAuthSession(): AuthSession | null {
 
     const parsed = JSON.parse(stored) as Partial<AuthSession>;
 
+    const validRoles: AuthRole[] = [
+      "PHARMACY",
+      "OPERATIONS",
+      "PRODUCT_MANAGER",
+      "SUPER_ADMIN",
+    ];
+
     if (
       parsed.authenticated === true &&
-      parsed.role === "PHARMACY" &&
-      typeof parsed.email === "string"
+      typeof parsed.email === "string" &&
+      typeof parsed.role === "string" &&
+      validRoles.includes(parsed.role as AuthRole)
     ) {
       return parsed as AuthSession;
     }
@@ -64,14 +110,29 @@ export function isAuthenticated() {
   return getAuthSession() !== null;
 }
 
-function setAuthCookie() {
+export function isAdminRole(
+  role: AuthRole | null | undefined,
+): role is Exclude<AuthRole, "PHARMACY"> {
+  return (
+    role === "OPERATIONS" ||
+    role === "PRODUCT_MANAGER" ||
+    role === "SUPER_ADMIN"
+  );
+}
+
+export function canAccessAdmin(session: AuthSession | null) {
+  return session !== null && isAdminRole(session.role);
+}
+
+function setAuthCookie(role: AuthRole) {
   if (typeof document === "undefined") {
     return;
   }
 
   const secure = window.location.protocol === "https:" ? "; Secure" : "";
 
-  document.cookie = `${AUTH_COOKIE_NAME}=pharmacy; Path=/; Max-Age=28800; SameSite=Lax${secure}`;
+  const cookieRole = role === "PHARMACY" ? "pharmacy" : role.toLowerCase();
+  document.cookie = `${AUTH_COOKIE_NAME}=${cookieRole}; Path=/; Max-Age=28800; SameSite=Lax${secure}`;
 }
 
 function clearAuthCookie() {
@@ -82,6 +143,15 @@ function clearAuthCookie() {
   document.cookie = `${AUTH_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax`;
 }
 
+function createSession(email: string, role: AuthRole): AuthSession {
+  return {
+    authenticated: true,
+    role,
+    email,
+    loggedInAt: new Date().toISOString(),
+  };
+}
+
 export function loginWithDemoCredentials(
   identifier: string,
   password: string,
@@ -89,22 +159,38 @@ export function loginWithDemoCredentials(
   const normalizedIdentifier = identifier.trim().toLowerCase();
   const normalizedPhone = identifier.trim();
 
-  const isValidIdentifier =
+  const isValidPharmacyIdentifier =
     normalizedIdentifier === DEMO_EMAIL || normalizedPhone === DEMO_PHONE;
 
-  if (!isValidIdentifier || password !== getStoredDemoPassword()) {
+  if (
+    isValidPharmacyIdentifier &&
+    password === getStoredDemoPassword()
+  ) {
+    const session = createSession(DEMO_EMAIL, "PHARMACY");
+
+    sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+    setAuthCookie(session.role);
+
+    return session;
+  }
+
+  const adminCredential = DEMO_ADMIN_CREDENTIALS.find(
+    (credential) =>
+      credential.email === normalizedIdentifier &&
+      credential.password === password,
+  );
+
+  if (!adminCredential) {
     return null;
   }
 
-  const session: AuthSession = {
-    authenticated: true,
-    role: "PHARMACY",
-    email: DEMO_EMAIL,
-    loggedInAt: new Date().toISOString(),
-  };
+  const session = createSession(
+    adminCredential.email,
+    adminCredential.role,
+  );
 
   sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
-  setAuthCookie();
+  setAuthCookie(session.role);
 
   return session;
 }
