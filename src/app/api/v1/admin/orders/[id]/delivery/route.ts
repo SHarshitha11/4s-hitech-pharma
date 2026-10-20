@@ -9,7 +9,10 @@ type Params = {
   params: Promise<{ id: string }>;
 };
 
-export async function PATCH(request: Request, { params }: Params) {
+export async function PATCH(
+  request: Request,
+  { params }: Params,
+) {
   const { id } = await params;
 
   const body = (await request.json()) as {
@@ -73,9 +76,9 @@ export async function PATCH(request: Request, { params }: Params) {
           delivery: {
             id: item.delivery?.id ?? `DEL-${item.id}`,
             orderId: item.id,
-            deliveryPartner: body.deliveryPartner,
-            deliveryPerson: body.deliveryPerson,
-            trackingNumber: body.trackingNumber,
+            deliveryPartner: body.deliveryPartner!,
+            deliveryPerson: body.deliveryPerson!,
+            trackingNumber: body.trackingNumber!,
             dispatchDate:
               body.dispatchDate || new Date().toISOString(),
             expectedDelivery: body.expectedDelivery || "",
