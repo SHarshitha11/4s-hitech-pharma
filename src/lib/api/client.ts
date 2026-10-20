@@ -1,5 +1,11 @@
-﻿const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
+import type {
+  DeliveryStatus,
+  ManagedOrder,
+  OrderStatus,
+} from "@/lib/order-delivery";
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 
 export class ApiError extends Error {
   status: number;
@@ -64,4 +70,56 @@ export async function apiRequest<T>(
   }
 
   return data as T;
+}
+
+type OrdersResponse = {
+  success: boolean;
+  data: ManagedOrder[];
+};
+
+type OrderResponse = {
+  success: boolean;
+  data: ManagedOrder;
+};
+
+export async function getAdminOrders() {
+  const response = await apiRequest<OrdersResponse>("/admin/orders");
+  return response.data;
+}
+
+export async function updateAdminOrderStatus(
+  orderId: string,
+  status: OrderStatus,
+) {
+  const response = await apiRequest<OrderResponse>(
+    `/admin/orders/${orderId}/status`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    },
+  );
+
+  return response.data;
+}
+
+export async function updateAdminDelivery(
+  orderId: string,
+  data: {
+    deliveryPartner: string;
+    deliveryPerson: string;
+    trackingNumber: string;
+    dispatchDate?: string;
+    expectedDelivery?: string;
+    status: DeliveryStatus;
+  },
+) {
+  const response = await apiRequest<OrderResponse>(
+    `/admin/orders/${orderId}/delivery`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    },
+  );
+
+  return response.data;
 }

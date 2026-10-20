@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,10 +9,13 @@ import {
   formatOrderStatus,
   getNextOrderStatus,
   getOrders,
-  saveOrders,
   type ManagedOrder,
   type OrderStatus,
 } from "@/lib/order-delivery";
+import {
+  getAdminOrders,
+  updateAdminOrderStatus,
+} from "@/lib/api/client";
 
 const STATUS_OPTIONS: OrderStatus[] = [
   "PENDING",
@@ -28,8 +31,45 @@ const STATUS_OPTIONS: OrderStatus[] = [
 ];
 
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState(getOrders);
+  const [orders, setOrders] = useState<ManagedOrder[]>(() => getOrders());
   const [search, setSearch] = useState("");
+  const [apiLoading, setApiLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [apiSuccess, setApiSuccess] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+
+    async function loadOrders() {
+      setApiLoading(true);
+      setApiError(null);
+
+      try {
+        const apiOrders = await getAdminOrders();
+
+        if (active) {
+          setOrders(apiOrders);
+        }
+      } catch (error) {
+        if (active) {
+          setApiError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load orders from the API.",
+          );
+        }
+      } finally {
+        if (active) {
+          setApiLoading(false);
+        }
+      }
+    }
+
+    loadOrders();
+
+    return () => {
+      active = false;
+    };
+  }, []);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [selectedOrder, setSelectedOrder] = useState<ManagedOrder | null>(null);
 
@@ -51,19 +91,34 @@ export default function AdminOrdersPage() {
     });
   }, [orders, search, statusFilter]);
 
-  function updateStatus(orderId: string, status: OrderStatus) {
-    const nextOrders = orders.map((order) =>
-      order.id === orderId ? { ...order, status } : order,
-    );
+  async function updateStatus(orderId: string, status: OrderStatus) {
+    setApiLoading(true);
+    setApiError(null);
+    setApiSuccess(null);
 
-    setOrders(nextOrders);
-    saveOrders(nextOrders);
+    try {
+      const updatedOrder = await updateAdminOrderStatus(orderId, status);
 
-    setSelectedOrder((current) =>
-      current && current.id === orderId
-        ? { ...current, status }
-        : current,
-    );
+      setOrders((currentOrders) =>
+        currentOrders.map((order) =>
+          order.id === orderId ? updatedOrder : order,
+        ),
+      );
+
+      setSelectedOrder((current) =>
+        current && current.id === orderId ? updatedOrder : current,
+      );
+
+      setApiSuccess(`Order ${orderId} updated successfully.`);
+    } catch (error) {
+      setApiError(
+        error instanceof Error
+          ? error.message
+          : "Unable to update the order.",
+      );
+    } finally {
+      setApiLoading(false);
+    }
   }
 
   function advanceOrder(order: ManagedOrder) {
@@ -74,6 +129,25 @@ export default function AdminOrdersPage() {
     }
   }
 
+  async function refreshOrdersFromApi() {
+    setApiLoading(true);
+    setApiError(null);
+    setApiSuccess(null);
+
+    try {
+      const apiOrders = await getAdminOrders();
+      setOrders(apiOrders);
+      setApiSuccess("Orders refreshed from the API.");
+    } catch (error) {
+      setApiError(
+        error instanceof Error
+          ? error.message
+          : "Unable to load orders from the API.",
+      );
+    } finally {
+      setApiLoading(false);
+    }
+  }
   function statusVariant(status: OrderStatus) {
     if (status === "DELIVERED") return "success" as const;
     if (status === "CANCELLED" || status === "RETURNED") {
@@ -99,6 +173,35 @@ export default function AdminOrdersPage() {
       </div>
 
       <Card>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
+          <div>
+            <h2 className="font-semibold">Orders</h2>
+            <p className="text-sm text-slate-500">
+              Orders are managed through the API.
+            </p>
+          </div>
+
+          <Button
+            variant="outline"
+            onClick={refreshOrdersFromApi}
+            disabled={apiLoading}
+          >
+            {apiLoading ? "Loading..." : "Refresh from API"}
+          </Button>
+        </div>
+
+        {apiError && (
+          <div className="mx-4 mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {apiError}
+          </div>
+        )}
+
+        {apiSuccess && (
+          <div className="mx-4 mt-4 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+            {apiSuccess}
+          </div>
+        )}
+
         <div className="grid gap-3 p-4 md:grid-cols-3">
           <input
             aria-label="Search orders"
@@ -167,8 +270,11 @@ export default function AdminOrdersPage() {
                       </Button>
 
                       {getNextOrderStatus(order.status) && (
-                        <Button onClick={() => advanceOrder(order)}>
-                          Next Status
+                        <Button
+                          onClick={() => advanceOrder(order)}
+                          disabled={apiLoading}
+                        >
+                          {apiLoading ? "Updating..." : "Next Status"}
                         </Button>
                       )}
 
@@ -291,4 +397,14 @@ export default function AdminOrdersPage() {
     </main>
   );
 }
+
+
+
+
+
+
+
+
+
+
 

@@ -1,12 +1,14 @@
-﻿"use client";
+"use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  getOrders,
-  saveOrders,
   type DeliveryStatus,
   type ManagedOrder,
 } from "@/lib/order-delivery";
+import {
+  getAdminOrders,
+  updateAdminDelivery,
+} from "@/lib/api/client";
 
 const DELIVERY_STATUSES: DeliveryStatus[] = [
   "READY_FOR_DISPATCH",
@@ -61,7 +63,7 @@ function toDateInput(value?: string) {
 }
 
 export default function AdminDeliveriesPage() {
-  const [orders, setOrders] = useState<ManagedOrder[]>(() => getOrders());
+  const [orders, setOrders] = useState<ManagedOrder[]>([]);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"ALL" | DeliveryStatus>("ALL");
   const [selectedOrder, setSelectedOrder] = useState<ManagedOrder | null>(
@@ -75,6 +77,46 @@ export default function AdminDeliveriesPage() {
   const [expectedDelivery, setExpectedDelivery] = useState("");
   const [deliveryStatus, setDeliveryStatus] =
     useState<DeliveryStatus>("READY_FOR_DISPATCH");
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadDeliveries() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const apiOrders = await getAdminOrders();
+
+        if (active) {
+          setOrders(apiOrders);
+        }
+      } catch (err) {
+        if (active) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Unable to load deliveries.",
+          );
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadDeliveries();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const deliveries = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -100,20 +142,38 @@ export default function AdminDeliveriesPage() {
     });
   }, [orders, search, filter]);
 
+  async function refreshDeliveries() {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const apiOrders = await getAdminOrders();
+      setOrders(apiOrders);
+      setSuccess("Delivery data refreshed successfully.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to refresh delivery data.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function openDelivery(order: ManagedOrder) {
     setSelectedOrder(order);
 
     setDeliveryPartner(order.delivery?.deliveryPartner ?? "");
     setDeliveryPerson(order.delivery?.deliveryPerson ?? "");
-    setTrackingNumber(
-  order.delivery?.trackingNumber ?? "",
-);
-    setDispatchDate(
-      toDateInput(order.delivery?.dispatchDate) ||
-        new Date().toISOString().slice(0, 10),
-    );
+    setTrackingNumber(order.delivery?.trackingNumber ?? "");
+    setDispatchDate(toDateInput(order.delivery?.dispatchDate));
     setExpectedDelivery(toDateInput(order.delivery?.expectedDelivery));
     setDeliveryStatus(order.delivery?.status ?? "READY_FOR_DISPATCH");
+
+    setError(null);
+    setSuccess(null);
   }
 
   function closeDelivery() {
@@ -126,115 +186,103 @@ export default function AdminDeliveriesPage() {
     setDeliveryStatus("READY_FOR_DISPATCH");
   }
 
-  function saveDelivery() {
+  async function saveDelivery() {
     if (!selectedOrder) return;
 
     if (!deliveryPartner.trim()) {
-      window.alert("Delivery partner is required.");
+      setError("Delivery partner is required.");
       return;
     }
 
     if (!deliveryPerson.trim()) {
-      window.alert("Delivery person is required.");
+      setError("Delivery person is required.");
       return;
     }
 
     if (!trackingNumber.trim()) {
-      window.alert("Tracking number is required.");
+      setError("Tracking number is required.");
       return;
     }
 
-    const updatedOrders = orders.map((order) => {
-      if (order.id !== selectedOrder.id) {
-        return order;
-      }
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
 
-      const updatedOrderStatus =
-        deliveryStatus === "DELIVERED"
-          ? "DELIVERED"
-          : deliveryStatus === "OUT_FOR_DELIVERY"
-            ? "OUT_FOR_DELIVERY"
-            : deliveryStatus === "ASSIGNED"
-              ? "DISPATCHED"
-              : order.status;
-
-      return {
-        ...order,
-        status: updatedOrderStatus,
-        delivery: {
-          id: order.delivery?.id ?? `DEL-${order.id}`,
-          orderId: order.id,
+    try {
+      const updatedOrder = await updateAdminDelivery(
+        selectedOrder.id,
+        {
           deliveryPartner: deliveryPartner.trim(),
           deliveryPerson: deliveryPerson.trim(),
           trackingNumber: trackingNumber.trim(),
           dispatchDate: dispatchDate
             ? new Date(dispatchDate).toISOString()
-            : new Date().toISOString(),
+            : undefined,
           expectedDelivery: expectedDelivery
             ? new Date(expectedDelivery).toISOString()
-            : "",
+            : undefined,
           status: deliveryStatus,
         },
-      };
-    });
+      );
 
-    setOrders(updatedOrders);
-    saveOrders(updatedOrders);
+      setOrders((currentOrders) =>
+        currentOrders.map((order) =>
+          order.id === updatedOrder.id ? updatedOrder : order,
+        ),
+      );
 
-    window.alert("Delivery details saved successfully.");
-    closeDelivery();
-  }
-
-  function updateDeliveryStatus(
-    order: ManagedOrder,
-    nextStatus: DeliveryStatus,
-  ) {
-    const updatedOrders = orders.map((currentOrder) => {
-      if (currentOrder.id !== order.id || !currentOrder.delivery) {
-        return currentOrder;
-      }
-
-      const updatedOrderStatus =
-        nextStatus === "DELIVERED"
-          ? "DELIVERED"
-          : nextStatus === "OUT_FOR_DELIVERY"
-            ? "OUT_FOR_DELIVERY"
-            : nextStatus === "ASSIGNED"
-              ? "DISPATCHED"
-              : currentOrder.status;
-
-      return {
-        ...currentOrder,
-        status: updatedOrderStatus,
-        delivery: {
-          ...currentOrder.delivery,
-          status: nextStatus,
-        },
-      };
-    });
-
-    setOrders(updatedOrders);
-    saveOrders(updatedOrders);
+      setSelectedOrder(updatedOrder);
+      setSuccess("Delivery details saved successfully.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to save delivery details.",
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <main className="space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          Delivery Management
-        </h1>
+    <main className="space-y-6 p-4 md:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Delivery Management
+          </h1>
 
-        <p className="mt-1 text-sm text-gray-600">
-          Assign deliveries and manage delivery tracking and status.
-        </p>
+          <p className="mt-1 text-sm text-gray-600">
+            Manage delivery assignment, tracking and status through the API.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={refreshDeliveries}
+          disabled={loading}
+          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+        >
+          {loading ? "Loading..." : "Refresh"}
+        </button>
       </div>
+
+      {error && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+          {success}
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-lg border bg-white p-4 shadow-sm">
           <p className="text-sm text-gray-500">Deliveries</p>
-          <p className="mt-1 text-2xl font-bold">
-            {deliveries.length}
-          </p>
+          <p className="mt-1 text-2xl font-bold">{deliveries.length}</p>
         </div>
 
         <div className="rounded-lg border bg-white p-4 shadow-sm">
@@ -319,7 +367,16 @@ export default function AdminDeliveriesPage() {
             </thead>
 
             <tbody className="divide-y divide-gray-200">
-              {deliveries.length > 0 ? (
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-4 py-10 text-center text-sm text-gray-500"
+                  >
+                    Loading deliveries...
+                  </td>
+                </tr>
+              ) : deliveries.length > 0 ? (
                 deliveries.map((order) => {
                   const delivery = order.delivery!;
 
@@ -359,41 +416,14 @@ export default function AdminDeliveriesPage() {
                       </td>
 
                       <td className="px-4 py-3">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end">
                           <button
                             type="button"
                             onClick={() => openDelivery(order)}
-                            className="rounded-md border px-3 py-1.5 text-sm"
+                            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
                           >
                             Manage
                           </button>
-
-                          {delivery.status === "ASSIGNED" ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                updateDeliveryStatus(
-                                  order,
-                                  "OUT_FOR_DELIVERY",
-                                )
-                              }
-                              className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white"
-                            >
-                              Dispatch
-                            </button>
-                          ) : null}
-
-                          {delivery.status === "OUT_FOR_DELIVERY" ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                updateDeliveryStatus(order, "DELIVERED")
-                              }
-                              className="rounded-md bg-green-600 px-3 py-1.5 text-sm text-white"
-                            >
-                              Confirm
-                            </button>
-                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -416,12 +446,13 @@ export default function AdminDeliveriesPage() {
 
       {selectedOrder ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-2xl rounded-xl bg-white shadow-xl">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white shadow-xl">
             <div className="flex items-center justify-between border-b px-6 py-4">
               <div>
                 <h2 className="text-lg font-bold">
                   Delivery Assignment
                 </h2>
+
                 <p className="text-sm text-gray-500">
                   {selectedOrder.id} · {selectedOrder.pharmacyName}
                 </p>
@@ -477,6 +508,7 @@ export default function AdminDeliveriesPage() {
                   onChange={(event) =>
                     setTrackingNumber(event.target.value)
                   }
+                  placeholder="4SHP-TRK-1004"
                   className="w-full rounded-md border px-3 py-2 text-sm"
                 />
               </div>
@@ -548,6 +580,7 @@ export default function AdminDeliveriesPage() {
                   type="button"
                   onClick={closeDelivery}
                   className="rounded-md border px-4 py-2 text-sm"
+                  disabled={saving}
                 >
                   Cancel
                 </button>
@@ -555,9 +588,10 @@ export default function AdminDeliveriesPage() {
                 <button
                   type="button"
                   onClick={saveDelivery}
-                  className="rounded-md bg-gray-900 px-4 py-2 text-sm text-white"
+                  disabled={saving}
+                  className="rounded-md bg-gray-900 px-4 py-2 text-sm text-white disabled:opacity-50"
                 >
-                  Save Delivery
+                  {saving ? "Saving..." : "Save Delivery"}
                 </button>
               </div>
             </div>
@@ -567,4 +601,3 @@ export default function AdminDeliveriesPage() {
     </main>
   );
 }
-
