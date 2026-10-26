@@ -157,7 +157,7 @@ export default function AdminBatchesPage() {
                   <td className="px-4 py-3">{batch.manufacturingDate}</td>
                   <td className="px-4 py-3">{batch.expiryDate}</td>
                   <td className="px-4 py-3">{batch.quantity}</td>
-                  <td className="px-4 py-3">?{batch.mrp}</td>
+                  <td className="px-4 py-3">Rs. {batch.mrp}</td>
                   <td className="px-4 py-3">{batch.warehouse}</td>
                   <td className="px-4 py-3">
                     <Badge variant={statusVariant(batch.status)}>

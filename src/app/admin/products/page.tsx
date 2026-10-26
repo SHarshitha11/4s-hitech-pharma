@@ -189,7 +189,7 @@ export default function AdminProductsPage() {
                     {categoryName(product.categoryId)}
                   </td>
                   <td className="px-4 py-3">{product.productCode}</td>
-                  <td className="px-4 py-3">?{product.wholesalePrice}</td>
+                  <td className="px-4 py-3">Rs. {product.wholesalePrice}</td>
                   <td className="px-4 py-3">{product.stockQuantity}</td>
                   <td className="px-4 py-3">
                     <Badge

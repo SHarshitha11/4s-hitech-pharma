@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useState } from "react";
@@ -34,7 +34,7 @@ export function Header() {
             <Link
               key={item.href}
               href={item.href}
-              className="text-sm font-medium text-gray-700 transition hover:text-gray-900"
+              className="text-sm font-medium text-gray-700 transition hover:text-gray-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
             >
               {item.label}
             </Link>
@@ -47,7 +47,7 @@ export function Header() {
 
         <button
           type="button"
-          className="inline-flex items-center justify-center rounded-md border border-gray-200 p-2 text-gray-700 lg:hidden"
+          className="inline-flex items-center justify-center rounded-md border border-gray-200 p-2 text-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 lg:hidden"
           aria-label={
             isMenuOpen ? "Close navigation menu" : "Open navigation menu"
           }
@@ -70,7 +70,7 @@ export function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
                 onClick={closeMenu}
               >
                 {item.label}
@@ -78,7 +78,9 @@ export function Header() {
             ))}
 
             <Link href={publicCta.href} onClick={closeMenu}>
-              <Button>{publicCta.label}</Button>
+              <span className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+                {publicCta.label}
+              </span>
             </Link>
           </div>
         </nav>
